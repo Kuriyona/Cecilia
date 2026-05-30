@@ -1,0 +1,53 @@
+{
+  "name": "@kuriyona/cecilia",
+  "version": "0.1.0",
+  "description": "网易云音乐 API 的非官方 TypeScript 封装",
+  "keywords": [
+    "api",
+    "music",
+    "netease",
+    "typescript"
+  ],
+  "homepage": "https://github.com/Kuriyona/Cecilia",
+  "bugs": {
+    "url": "https://github.com/Kuriyona/Cecilia/issues"
+  },
+  "license": "MIT",
+  "author": "Kuriyona <kuriyona@outlook.com>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Kuriyona/Cecilia.git"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "tsdown": "^0.22.1",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.7"
+  },
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "^11.4.0",
+      "onFail": "download"
+    }
+  },
+  "email": "kuriyona@outlook.com"
+}

@@ -59,3 +59,9 @@ export const getSongsDetail = async (ids: number[]): Promise<SongDetail[]> => {
     duration: s.dt,
   }));
 };
+
+export default {
+  getPlaylistDetail,
+  getLyric,
+  getSongsDetail,
+};

@@ -1,6 +1,7 @@
-import { LyricLine, RawLyric } from "./types/Lyric";
+import { Lyric, RawLyric } from "./types/Lyric";
 import { PlaylistDetails, RawPlaylistDetails } from "./types/PlaylistDetail";
 import { RawSongDetails, SongDetail } from "./types/SongDetails";
+import { mergeLyricTimelines, type LrcEntry } from "./utils/mergeLyricTimelines";
 
 const BASE_URL = "https://music.163.com/api/";
 
@@ -18,10 +19,8 @@ export const getPlaylistDetail = async (id: number): Promise<PlaylistDetails> =>
   };
 };
 
-export const getLyric = async (id: number): Promise<LyricLine[]> => {
-  const res = await fetch(`${BASE_URL}/song/lyric?id=${id}&lv=-1`);
-  const data = (await res.json()) as RawLyric;
-  return data.lrc.lyric
+const parseLrc = (lrc: string): LrcEntry[] =>
+  lrc
     .split("\n")
     .filter((l) => l.startsWith("["))
     .map((l) => {
@@ -31,7 +30,17 @@ export const getLyric = async (id: number): Promise<LyricLine[]> => {
       const seconds = parseFloat(match[2]);
       return { time: minutes * 60 + seconds, text: match[3].trim() };
     })
-    .filter((l): l is LyricLine => l !== null);
+    .filter((e): e is LrcEntry => e !== null);
+
+export const getLyric = async (id: number): Promise<Lyric> => {
+  const res = await fetch(`${BASE_URL}/song/lyric?id=${id}&lv=-1&tv=-1`);
+  const data = (await res.json()) as RawLyric;
+  const original = parseLrc(data.lrc.lyric);
+  const translation = data.tlyric?.lyric ? parseLrc(data.tlyric.lyric) : [];
+  return {
+    lines: mergeLyricTimelines(original, translation),
+    ...(data.transUser ? { translator: data.transUser } : {}),
+  };
 };
 
 export const getSongsDetail = async (ids: number[]): Promise<SongDetail[]> => {

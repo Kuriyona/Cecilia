@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { getPlaylistDetail, getLyric, getSongsDetail } from "./index";
+import { mergeLyricTimelines } from "./utils/mergeLyricTimelines";
 import type { RawPlaylistDetails } from "./types/PlaylistDetail";
 import type { RawLyric } from "./types/Lyric";
 import type { RawSongDetails } from "./types/SongDetails";
@@ -49,45 +50,120 @@ describe("getPlaylistDetail", () => {
   });
 });
 
+describe("mergeLyricTimelines", () => {
+  it("should merge with different timestamps, carrying forward values", () => {
+    const result = mergeLyricTimelines(
+      [
+        { time: 0, text: "Hello" },
+        { time: 2, text: "World" },
+      ],
+      [
+        { time: 1, text: "你好" },
+        { time: 2, text: "世界" },
+        { time: 3, text: "!" },
+      ],
+    );
+
+    expect(result).toEqual([
+      { time: 0, text: "Hello" },
+      { time: 1, text: "Hello", translation: "你好" },
+      { time: 2, text: "World", translation: "世界" },
+      { time: 3, text: "World", translation: "!" },
+    ]);
+  });
+
+  it("should carry forward translation when only original changes", () => {
+    const result = mergeLyricTimelines(
+      [
+        { time: 0, text: "Hello" },
+        { time: 2, text: "World" },
+      ],
+      [
+        { time: 0, text: "你好" },
+      ],
+    );
+
+    expect(result).toEqual([
+      { time: 0, text: "Hello", translation: "你好" },
+      { time: 2, text: "World", translation: "你好" },
+    ]);
+  });
+
+  it("should carry forward original when only translation changes", () => {
+    const result = mergeLyricTimelines(
+      [
+        { time: 0, text: "Hello" },
+      ],
+      [
+        { time: 0, text: "你好" },
+        { time: 2, text: "世界" },
+      ],
+    );
+
+    expect(result).toEqual([
+      { time: 0, text: "Hello", translation: "你好" },
+      { time: 2, text: "Hello", translation: "世界" },
+    ]);
+  });
+
+  it("should handle same timestamps correctly", () => {
+    const result = mergeLyricTimelines(
+      [
+        { time: 0, text: "Hello" },
+        { time: 1, text: "World" },
+      ],
+      [
+        { time: 0, text: "你好" },
+        { time: 1, text: "世界" },
+      ],
+    );
+
+    expect(result).toEqual([
+      { time: 0, text: "Hello", translation: "你好" },
+      { time: 1, text: "World", translation: "世界" },
+    ]);
+  });
+
+  it("should return empty array for empty inputs", () => {
+    expect(mergeLyricTimelines([], [])).toEqual([]);
+  });
+
+  it("should use empty string for original text when translation precedes first original line", () => {
+    const result = mergeLyricTimelines(
+      [{ time: 2, text: "World" }],
+      [{ time: 0, text: "你好" }],
+    );
+
+    expect(result).toEqual([
+      { time: 0, text: "", translation: "你好" },
+      { time: 2, text: "World", translation: "你好" },
+    ]);
+  });
+
+  it("should omit translation key when no translation exists", () => {
+    const result = mergeLyricTimelines(
+      [
+        { time: 0, text: "Hello" },
+        { time: 1, text: "World" },
+      ],
+      [],
+    );
+
+    expect(result).toEqual([
+      { time: 0, text: "Hello" },
+      { time: 1, text: "World" },
+    ]);
+  });
+});
+
 describe("getLyric", () => {
-  it("should parse lyric lines correctly", async () => {
+  it("should parse lyric lines correctly without translation", async () => {
     const raw: RawLyric = {
       lrc: {
         v: 1,
         lyric: "[00:01.50]Hello\n[00:05.00]World\n[00:10.25] Foo Bar",
       },
-    };
-
-    mockFetch.mockResolvedValueOnce({ json: () => Promise.resolve(raw) });
-
-    const result = await getLyric(1);
-    expect(result).toEqual([
-      { time: 1.5, text: "Hello" },
-      { time: 5, text: "World" },
-      { time: 10.25, text: "Foo Bar" },
-    ]);
-  });
-
-  it("should filter out non-lyric lines", async () => {
-    const raw: RawLyric = {
-      lrc: {
-        v: 1,
-        lyric: "[00:01.50]Hello\n\n[00:05.00]World",
-      },
-    };
-
-    mockFetch.mockResolvedValueOnce({ json: () => Promise.resolve(raw) });
-
-    const result = await getLyric(1);
-    expect(result).toEqual([
-      { time: 1.5, text: "Hello" },
-      { time: 5, text: "World" },
-    ]);
-  });
-
-  it("should handle empty lyric string", async () => {
-    const raw: RawLyric = {
-      lrc: {
+      tlyric: {
         v: 1,
         lyric: "",
       },
@@ -96,7 +172,132 @@ describe("getLyric", () => {
     mockFetch.mockResolvedValueOnce({ json: () => Promise.resolve(raw) });
 
     const result = await getLyric(1);
-    expect(result).toEqual([]);
+    expect(result).toEqual({
+      lines: [
+        { time: 1.5, text: "Hello" },
+        { time: 5, text: "World" },
+        { time: 10.25, text: "Foo Bar" },
+      ],
+    });
+    expect(result.translator).toBeUndefined();
+  });
+
+  it("should parse both lrc and tlyric and merge them", async () => {
+    const raw: RawLyric = {
+      lrc: {
+        v: 1,
+        lyric: "[00:01.50]Hello\n[00:05.00]World",
+      },
+      tlyric: {
+        v: 1,
+        lyric: "[00:01.50]你好\n[00:05.00]世界",
+      },
+    };
+
+    mockFetch.mockResolvedValueOnce({ json: () => Promise.resolve(raw) });
+
+    const result = await getLyric(1);
+    expect(result).toEqual({
+      lines: [
+        { time: 1.5, text: "Hello", translation: "你好" },
+        { time: 5, text: "World", translation: "世界" },
+      ],
+    });
+    expect(result.translator).toBeUndefined();
+  });
+
+  it("should carry forward translation when timelines don't align", async () => {
+    const raw: RawLyric = {
+      lrc: {
+        v: 1,
+        lyric: "[00:01.50]Hello\n[00:03.00]World\n[00:05.00]Foo",
+      },
+      tlyric: {
+        v: 1,
+        lyric: "[00:02.00]你好\n[00:05.00]世界",
+      },
+    };
+
+    mockFetch.mockResolvedValueOnce({ json: () => Promise.resolve(raw) });
+
+    const result = await getLyric(1);
+    expect(result).toEqual({
+      lines: [
+        { time: 1.5, text: "Hello" },
+        { time: 2, text: "Hello", translation: "你好" },
+        { time: 3, text: "World", translation: "你好" },
+        { time: 5, text: "Foo", translation: "世界" },
+      ],
+    });
+    expect(result.translator).toBeUndefined();
+  });
+
+  it("should use transUser from API response as translator", async () => {
+    const raw: RawLyric = {
+      transUser: { id: 100, nickname: "Translater" },
+      lrc: {
+        v: 1,
+        lyric: "[00:01.50]Hello\n[00:05.00]World",
+      },
+      tlyric: {
+        v: 1,
+        lyric: "[00:01.50]你好\n[00:05.00]世界",
+      },
+    };
+
+    mockFetch.mockResolvedValueOnce({ json: () => Promise.resolve(raw) });
+
+    const result = await getLyric(1);
+    expect(result).toEqual({
+      lines: [
+        { time: 1.5, text: "Hello", translation: "你好" },
+        { time: 5, text: "World", translation: "世界" },
+      ],
+      translator: { id: 100, nickname: "Translater" },
+    });
+  });
+
+  it("should filter out [by:...] metadata lines from line parsing", async () => {
+    const raw: RawLyric = {
+      lrc: {
+        v: 1,
+        lyric: "[00:01.50]Hello\n\n[00:05.00]World",
+      },
+      tlyric: {
+        v: 1,
+        lyric: "[by:Someone]\n[00:05.00]世界",
+      },
+    };
+
+    mockFetch.mockResolvedValueOnce({ json: () => Promise.resolve(raw) });
+
+    const result = await getLyric(1);
+    expect(result).toEqual({
+      lines: [
+        { time: 1.5, text: "Hello" },
+        { time: 5, text: "World", translation: "世界" },
+      ],
+    });
+    expect(result.translator).toBeUndefined();
+  });
+
+  it("should handle empty lyric string", async () => {
+    const raw: RawLyric = {
+      lrc: {
+        v: 1,
+        lyric: "",
+      },
+      tlyric: {
+        v: 1,
+        lyric: "",
+      },
+    };
+
+    mockFetch.mockResolvedValueOnce({ json: () => Promise.resolve(raw) });
+
+    const result = await getLyric(1);
+    expect(result).toEqual({ lines: [] });
+    expect(result.translator).toBeUndefined();
   });
 });
 

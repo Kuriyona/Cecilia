@@ -35,6 +35,7 @@
   },
   "scripts": {
     "build": "tsdown",
+    "clone:api-enhanced": "node -e \"require('node:fs').rmSync('api-enhanced',{recursive:true,force:true})\" && git clone --depth=1 git@github.com:NeteaseCloudMusicApiEnhanced/api-enhanced.git",
     "test": "vitest run",
     "test:watch": "vitest"
   },

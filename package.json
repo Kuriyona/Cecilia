@@ -1,6 +1,6 @@
 {
   "name": "@kuriyona/cecilia",
-  "version": "1.0.0",
+  "version": "2.0.0-beta.1",
   "description": "网易云音乐 API 的非官方 TypeScript 封装",
   "keywords": [
     "api",
@@ -33,6 +33,16 @@
         "types": "./dist/index.d.cts",
         "default": "./dist/index.cjs"
       }
+    },
+    "./elysia": {
+      "import": {
+        "types": "./dist/elysia.d.mts",
+        "default": "./dist/elysia.mjs"
+      },
+      "require": {
+        "types": "./dist/elysia.d.cts",
+        "default": "./dist/elysia.cjs"
+      }
     }
   },
   "publishConfig": {
@@ -48,8 +58,23 @@
   "engines": {
     "node": ">=18"
   },
+  "peerDependencies": {
+    "@elysiajs/cors": "^1.4.2",
+    "elysia": "^1.4.0"
+  },
+  "peerDependenciesMeta": {
+    "@elysiajs/cors": {
+      "optional": true
+    },
+    "elysia": {
+      "optional": true
+    }
+  },
   "devDependencies": {
+    "@elysiajs/cors": "^1.4.2",
+    "@types/bun": "^1.4.2",
     "@types/node": "^26.6.2",
+    "elysia": "^1.4.30",
     "tsdown": "^0.22.1",
     "typescript": "^6.0.3",
     "vitest": "^4.1.7"

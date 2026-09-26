@@ -38,6 +38,8 @@ import {
   search,
   searchMultimatch,
 } from "../src/index";
+import type { SearchResult } from "../src/index";
+import { createApp } from "../src/elysia";
 
 const ARTIST_HOYO_MIX = 12487174;
 const ARTIST_CHEVY = 47992679;
@@ -339,5 +341,17 @@ describe("专辑", () => {
 
     expect(albums.length).toBeGreaterThan(0);
     expect(albums[0]?.coverUrl.startsWith("http")).toBe(true);
+  });
+});
+
+describe("Elysia 服务器", () => {
+  it("createApp 的 /search 走真实网络返回歌曲", async () => {
+    const res = await createApp().handle(
+      new Request("http://localhost/search?keywords=HoYo-MiX&limit=5"),
+    );
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as SearchResult;
+    expect(body.songs?.length).toBeGreaterThan(0);
   });
 });

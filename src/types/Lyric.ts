@@ -1,19 +1,20 @@
 export interface RawLyric {
   transUser?: {
-    id: number;
-    nickname: string;
+    id?: number;
+    nickname?: string;
   };
-  lrc: {
-    v: number;
-    lyric: string;
-    // format: [00:00.00]我是歌词
+  lrc?: {
+    lyric?: string;
   };
-  tlyric: {
-    v: number;
-    lyric: string;
-    // format: [by:用户名]
-    // format: [00:00.00]我是歌词
-  };
+  tlyric?: {
+    lyric?: string;
+  } | null;
+  yrc?: {
+    lyric?: string;
+  } | null;
+  romalrc?: {
+    lyric?: string;
+  } | null;
 }
 
 export interface Lyric {
@@ -29,3 +30,19 @@ export type LyricLine = {
   text: string;
   translation?: string;
 };
+
+export interface WordLine {
+  time: number;
+  duration: number;
+  words: {
+    time: number;
+    duration: number;
+    text: string;
+  }[];
+}
+
+export interface LyricNew {
+  lines: LyricLine[];
+  wordLines?: WordLine[];
+  romaLines?: LyricLine[];
+}

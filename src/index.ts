@@ -1,67 +1,175 @@
-import { Lyric, RawLyric } from "./types/Lyric";
-import { PlaylistDetails, RawPlaylistDetails } from "./types/PlaylistDetail";
-import { RawSongDetails, SongDetail } from "./types/SongDetails";
-import { mergeLyricTimelines, type LrcEntry } from "./utils/mergeLyricTimelines";
+import {
+  getAlbum,
+  getAlbumDynamic,
+  getAlbumList,
+  getAlbumPrivileges,
+  getAlbumProduct,
+  getAlbumSaleBoard,
+  getNewestAlbums,
+} from "./apis/album";
+import {
+  getArtist,
+  getArtistAlbums,
+  getArtistDesc,
+  getArtistDetail,
+  getArtistList,
+  getArtistMvs,
+  getArtistSongs,
+  getArtistTopSongs,
+  getArtistVideos,
+} from "./apis/artist";
+import {
+  getHighQualityPlaylists,
+  getHighQualityTags,
+  getPlaylistCategories,
+  getPlaylistDetail,
+  getPlaylistDetailDynamic,
+  getPlaylistTracks,
+  getRelatedPlaylists,
+  getTopPlaylists,
+} from "./apis/playlist";
+import {
+  checkMusic,
+  getLyric,
+  getLyricNew,
+  getSimilarSongs,
+  getSongUrl,
+  getSongsDetail,
+} from "./apis/song";
+import {
+  cloudSearch,
+  getDefaultSearchKeyword,
+  getHotSearchDetail,
+  getHotSearches,
+  getSearchSuggest,
+  search,
+  searchMultimatch,
+} from "./apis/search";
 
-const BASE_URL = "https://music.163.com/api/";
+export type {
+  Album,
+  AlbumRef,
+  Artist,
+  ArtistRef,
+  MvRef,
+  PlaylistSummary,
+  Song,
+  SongUrl,
+  UserRef,
+  VideoRef,
+} from "./types/common";
+export type {
+  HotSearchGroup,
+  HotSearchItem,
+  SearchLyric,
+  SearchRadio,
+  SearchResult,
+  SearchSuggest,
+  SearchType,
+} from "./types/search";
+export type { Lyric, LyricLine, LyricNew, WordLine } from "./types/Lyric";
+export type { MusicAvailability, SongDetail } from "./types/SongDetails";
+export type {
+  PlaylistCategory,
+  PlaylistDetail,
+  PlaylistPage,
+  PlaylistStats,
+  PlaylistTag,
+} from "./types/PlaylistDetail";
+export type {
+  AlbumPage,
+  AlbumPrivilege,
+  AlbumProduct,
+  AlbumSaleBoard,
+  AlbumStats,
+} from "./types/album";
+export type {
+  ArtistDescription,
+  ArtistPage,
+  ArtistVideoPage,
+} from "./types/artist";
+export type * from "./types/params";
 
-export const getPlaylistDetail = async (id: number): Promise<PlaylistDetails> => {
-  const res = await fetch(`${BASE_URL}/v6/playlist/detail?id=${id}`);
-  const data = (await res.json()) as RawPlaylistDetails;
-  return {
-    id: data.playlist.id,
-    name: data.playlist.name,
-    coverImgId: data.playlist.coverImgId,
-    coverImgUrl: data.playlist.coverImgUrl,
-    userId: data.playlist.userId,
-    createTime: data.playlist.createTime,
-    songs: data.playlist.trackIds.map((t) => ({ id: t.id, addTime: t.at })),
-  };
-};
+export { NeteaseApiError } from "./errors";
+export { request } from "./client";
+export type { Crypto, RequestOptions } from "./client";
 
-const parseLrc = (lrc: string): LrcEntry[] =>
-  lrc
-    .split("\n")
-    .filter((l) => l.startsWith("["))
-    .map((l) => {
-      const match = l.match(/^\[(\d{2}):(\d{2}(?:\.\d{2,3})?)\](.*)/);
-      if (!match) return null;
-      const minutes = parseInt(match[1], 10);
-      const seconds = parseFloat(match[2]);
-      return { time: minutes * 60 + seconds, text: match[3].trim() };
-    })
-    .filter((e): e is LrcEntry => e !== null);
-
-export const getLyric = async (id: number): Promise<Lyric> => {
-  const res = await fetch(`${BASE_URL}/song/lyric?id=${id}&lv=-1&tv=-1`);
-  const data = (await res.json()) as RawLyric;
-  const original = parseLrc(data.lrc.lyric);
-  const translation = data.tlyric?.lyric ? parseLrc(data.tlyric.lyric) : [];
-  return {
-    lines: mergeLyricTimelines(original, translation),
-    ...(data.transUser ? { translator: data.transUser } : {}),
-  };
-};
-
-export const getSongsDetail = async (ids: number[]): Promise<SongDetail[]> => {
-  const query = JSON.stringify(
-    ids.map((id) => ({
-      id,
-    })),
-  );
-  const res = await fetch(`${BASE_URL}/v3/song/detail?c=${query}`);
-  const data = (await res.json()) as RawSongDetails;
-  return data.songs.map((s) => ({
-    id: s.id,
-    name: s.name,
-    artists: s.ar.map((a) => ({ id: a.id, name: a.name })),
-    album: { id: s.al.id, name: s.al.name, picUrl: s.al.picUrl },
-    duration: s.dt,
-  }));
+export {
+  search,
+  cloudSearch,
+  getSearchSuggest,
+  getHotSearches,
+  getHotSearchDetail,
+  getDefaultSearchKeyword,
+  searchMultimatch,
+  getSongsDetail,
+  getSongUrl,
+  getLyric,
+  getLyricNew,
+  checkMusic,
+  getSimilarSongs,
+  getPlaylistDetail,
+  getPlaylistTracks,
+  getPlaylistDetailDynamic,
+  getHighQualityTags,
+  getTopPlaylists,
+  getHighQualityPlaylists,
+  getPlaylistCategories,
+  getRelatedPlaylists,
+  getArtist,
+  getArtistDetail,
+  getArtistSongs,
+  getArtistTopSongs,
+  getArtistAlbums,
+  getArtistList,
+  getArtistDesc,
+  getArtistMvs,
+  getArtistVideos,
+  getAlbum,
+  getAlbumProduct,
+  getAlbumDynamic,
+  getAlbumSaleBoard,
+  getAlbumPrivileges,
+  getAlbumList,
+  getNewestAlbums,
 };
 
 export default {
-  getPlaylistDetail,
-  getLyric,
+  search,
+  cloudSearch,
+  getSearchSuggest,
+  getHotSearches,
+  getHotSearchDetail,
+  getDefaultSearchKeyword,
+  searchMultimatch,
   getSongsDetail,
+  getSongUrl,
+  getLyric,
+  getLyricNew,
+  checkMusic,
+  getSimilarSongs,
+  getPlaylistDetail,
+  getPlaylistTracks,
+  getPlaylistDetailDynamic,
+  getHighQualityTags,
+  getTopPlaylists,
+  getHighQualityPlaylists,
+  getPlaylistCategories,
+  getRelatedPlaylists,
+  getArtist,
+  getArtistDetail,
+  getArtistSongs,
+  getArtistTopSongs,
+  getArtistAlbums,
+  getArtistList,
+  getArtistDesc,
+  getArtistMvs,
+  getArtistVideos,
+  getAlbum,
+  getAlbumProduct,
+  getAlbumDynamic,
+  getAlbumSaleBoard,
+  getAlbumPrivileges,
+  getAlbumList,
+  getNewestAlbums,
 };
